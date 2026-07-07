@@ -1,5 +1,5 @@
 import { Endpoints } from "@octokit/types";
-import invariant from "tiny-invariant";
+import invariant from "invariant";
 
 type Commits = Endpoints["GET /repos/{owner}/{repo}/commits"]["response"]["data"];
 type Repositories = Endpoints["GET /orgs/{org}/repos"]["response"]["data"];
@@ -39,7 +39,7 @@ async function getCommits(owner: string, repository: string, pathname?: string) 
     },
   });
 
-  invariant(response.ok, `getCommits gave ${response.status}`);
+  invariant(response.ok, `getCommits gave ${response.status} for ${owner}/${repository}`);
 
   const commits: Commits = await response.json();
   return commits;

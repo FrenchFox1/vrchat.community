@@ -6,7 +6,7 @@ import { icons as lucideIcons } from "lucide-react";
 import * as simpleIcons from "@icons-pack/react-simple-icons";
 import { createElement } from "react";
 import * as icons from "./icons";
-import invariant from "tiny-invariant";
+import invariant from "invariant";
 import { getContributors, githubOrganization, githubRepository } from "@/github";
 
 function kebabCase(value: string) {
@@ -35,10 +35,13 @@ export const source = loader(
       baseDir: "reference",
       per: "operation",
       name: (output, document) => {
-        invariant(output.type === "operation");
+        invariant(output.type === "operation", `expected operation output, got ${output.type}`);
 
         const operation = document.paths?.[output.item.path]?.[output.item.method];
-        invariant(operation && operation.operationId);
+        invariant(
+          operation && operation.operationId,
+          `missing operationId for ${output.item.method} ${output.item.path}`,
+        );
 
         return `(${operation.tags?.[0] || "miscellaneous"})/${kebabCase(operation.operationId)}`;
       },
