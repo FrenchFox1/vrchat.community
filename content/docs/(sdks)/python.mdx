@@ -95,13 +95,14 @@ with vrchatapi.ApiClient(configuration) as api_client:
 The Python SDK uses cookies behind the scenes in its API client. If you keep the same running process and API client alive, authenticated calls can reuse the existing session.  
 If your app restarts, you usually need to authenticate again unless you implement your own persistent cookie/session storage around the client.
 
-In order to accomplish this, we persist the HTTP cookie jar to disk and reload it on startup.
+In order to accomplish this, we persist cookies to disk with `pickle` and reload them on startup.
 
-This lets your script reuse existing auth cookies between runs via `pickle`
+Note: do **not** pickle the live `CookieJar` object directly (it contains a lock and will fail). Instead, pickle the list of cookies and rebuild a jar on load.
 
 ```python
 import os
-import pickle # PICKLE
+import pickle
+from http.cookiejar import CookieJar
 
 import vrchatapi
 from vrchatapi.api import authentication_api
@@ -116,18 +117,22 @@ configuration = vrchatapi.Configuration(
 with vrchatapi.ApiClient(configuration) as api_client:
     api_client.user_agent = "ExampleProgram/0.0.1 my@email.com"
 
-    # If a saved cookie file exists, load it before making requests.
+    # If a saved cookie file exists, rebuild a CookieJar and load it.
     if os.path.exists(COOKIE_FILE):
         with open(COOKIE_FILE, "rb") as fh:
-            api_client.rest_client.pool_manager.cookiejar = pickle.load(fh)
+            cookies = pickle.load(fh)
+        jar = CookieJar()
+        for cookie in cookies:
+            jar.set_cookie(cookie)
+        api_client.rest_client.cookie_jar = jar
 
     auth_api = authentication_api.AuthenticationApi(api_client)
     user = auth_api.get_current_user()
     print(f"Logged in as {user.display_name}")
 
-    # Save updated cookies after successful login/use.
+    # Save the cookies (not the jar object itself) after successful login/use.
     with open(COOKIE_FILE, "wb") as fh:
-        pickle.dump(api_client.rest_client.pool_manager.cookiejar, fh)
+        pickle.dump(list(api_client.rest_client.cookie_jar), fh)
 ```
 
 ## Frequently Asked Questions
